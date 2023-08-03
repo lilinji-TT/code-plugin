@@ -1,7 +1,6 @@
 import axios from 'axios'
 import * as vscode from 'vscode'
 import { ImprovementScope, RequestData } from '../type'
-import { startLoading, stopLoading } from './webview'
 import path = require('path')
 
 const API_URL =
@@ -53,17 +52,26 @@ const fetchDataFromAPI = async (
   }
 
   try {
-    const response = await axios.post(API_URL, requestData)
-    const improvedCode =
-      response.data.improved_project_objects[0]?.code?.content
-
-    if (improvedCode) {
-      replaceContent(range, improvedCode)
-    }
+    vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: 'Processing request',
+        cancellable: true,
+      },
+      async (progress) => {
+        progress.report({ message: 'Starting to fetch data from the API...' })
+        const response = await axios.post(API_URL, requestData)
+        const improvedCode =
+          response.data.improved_project_objects[0]?.code?.content
+        progress.report({ message: 'Request finished' })
+        if (improvedCode) {
+          replaceContent(range, improvedCode)
+        }
+      }
+    )
   } catch (error) {
     console.error('Failed to fetch data from the API:', error)
   } finally {
-    stopLoading()
   }
 }
 
@@ -74,6 +82,7 @@ const replaceContent = (
 ) => {
   editor?.edit((editBuilder) => {
     editBuilder.replace(range, code)
+    vscode.window.showInformationMessage('Done!')
   })
 }
 
@@ -83,13 +92,10 @@ export const YACAPlugin = async () => {
     vscode.window.showErrorMessage('No editor is active')
     return
   }
-  const startLine = editor.document.lineAt(0).range.start.line
-  const endLine = editor.document.lineAt(0).range.end.line
   const range = new vscode.Range(
     editor.document.lineAt(0).range.start,
     editor.document.lineAt(editor.document.lineCount - 1).range.end
   )
-  startLoading(startLine, endLine)
   const code = editor.document.getText(range)
   if (!code.length) {
     return
@@ -104,7 +110,6 @@ export const YACAPluginSelected = async () => {
     return
   }
   const selectedRange = editor.selection
-  startLoading(selectedRange.start.line, selectedRange.end.line)
   const code = editor.document.getText(selectedRange)
   if (!code.length) {
     return
