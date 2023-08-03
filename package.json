@@ -15,28 +15,25 @@
     "menus": {
       "editor/context": [
         {
-          "when": "editorFocus",
+          "when": "!editorHasSelection",
           "command": "extension.YACA:VsCodePlugin",
           "group": "navigation"
-        }
-      ],
-      "explorer/context": [
+        },
         {
-          "command": "extension.YACA:myCustomCommandExplorer",
-          "group": "navigation",
-          "when": "resourceLangId == 'plaintext'",
-          "title": "YACA:myCustomCommandExplorer"
+          "when": "editorHasSelection",
+          "command": "extension.YACA:VsCodePluginSelected",
+          "group": "navigation"
         }
       ]
     },
     "commands": [
       {
         "command": "extension.YACA:VsCodePlugin",
-        "title": "YACA:CodeImprovement"
+        "title": "YACA Code Improvement"
       },
       {
-        "command": "extension.YACA:myCustomCommandExplorer",
-        "title": "YACA:myCustomCommandExplorer"
+        "command": "extension.YACA:VsCodePluginSelected",
+        "title": "YACA Code Improvement Selected"
       }
     ]
   },
