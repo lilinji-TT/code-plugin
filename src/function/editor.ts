@@ -1,35 +1,42 @@
 import axios from 'axios'
 import * as vscode from 'vscode'
 import { ImprovementScope, RequestData } from '../type'
+import { startLoading, stopLoading } from './webview'
 import path = require('path')
-const URL =
+
+const API_URL =
   'http://s-gateway-qa.k8s.zhihuiya.com/s-ops-yaca-backend/2023-07/code/improvement'
 
 let editor = vscode.window.activeTextEditor
 
+// Get the relative path of the current file
 const getRelativePath = (): string => {
   if (editor) {
-    let filePath = editor!.document.fileName
-    let workspaceRoot
-    if (vscode.workspace.workspaceFolders !== undefined) {
-      workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath
+    const filePath = editor.document.fileName
+    const workspaceFolders = vscode.workspace.workspaceFolders
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      const workspaceRoot = workspaceFolders[0].uri.fsPath
+      const relativePath = path.relative(workspaceRoot, filePath)
+      return relativePath
     }
-    let relativePath = path.relative(workspaceRoot!, filePath)
-
-    return relativePath
   }
-  vscode.window.showErrorMessage('No Editor is active')
-  return 'No Editor is active'
+  vscode.window.showErrorMessage('No active editor or workspace folder found')
+  return 'No active editor or workspace folder found'
 }
 
+// Get the language of the current file
 const getCodeLanguage = (): string => {
-  return editor!.document.languageId.toUpperCase()
+  return editor?.document.languageId.toUpperCase() || ''
 }
 
-async function fetchFromAPI(code: string) {
-  let language = getCodeLanguage()
-  let relativePath = getRelativePath()
-  const data: RequestData = {
+// Fetch data from the API
+const fetchDataFromAPI = async (
+  range: vscode.Range | vscode.Position | vscode.Selection,
+  code: string
+) => {
+  const language = getCodeLanguage()
+  const relativePath = getRelativePath()
+  const requestData: RequestData = {
     scope: ImprovementScope.SNIPPET,
     project_objects: [
       {
@@ -37,80 +44,70 @@ async function fetchFromAPI(code: string) {
         is_directory: false,
         size: code.length,
         code: {
-          content: `${code}`,
+          content: code,
           language,
         },
       },
     ],
     rules: ['AMBIGUOUS_NAME', 'EARLY_RETURN'],
   }
-  return await axios.post(URL, data)
+
+  try {
+    const response = await axios.post(API_URL, requestData)
+    const improvedCode =
+      response.data.improved_project_objects[0]?.code?.content
+
+    if (improvedCode) {
+      replaceContent(range, improvedCode)
+    }
+  } catch (error) {
+    console.error('Failed to fetch data from the API:', error)
+  } finally {
+    stopLoading()
+  }
 }
 
+// Replace content in the editor
+const replaceContent = (
+  range: vscode.Range | vscode.Position | vscode.Selection,
+  code: string
+) => {
+  editor?.edit((editBuilder) => {
+    editBuilder.replace(range, code)
+  })
+}
+
+// Main plugin function
 export const YACAPlugin = async () => {
   if (!editor) {
     vscode.window.showErrorMessage('No editor is active')
     return
   }
-
-  //运行命令选择所有文本
+  const startLine = editor.document.lineAt(0).range.start.line
+  const endLine = editor.document.lineAt(0).range.end.line
   const range = new vscode.Range(
     editor.document.lineAt(0).range.start,
     editor.document.lineAt(editor.document.lineCount - 1).range.end
   )
-
+  startLoading(startLine, endLine)
   const code = editor.document.getText(range)
-  if (!code) {
+  if (!code.length) {
     return
   }
-
-  const response = await fetchFromAPI(code)
-  //处理响应
-  if (!response.data.improved_project_objects[0].code.content) {
-    return
-  }
-  //处理响应
-  if (range) {
-    replaceContent(
-      range,
-      response.data.improved_project_objects[0].code.content
-    )
-  }
+  await fetchDataFromAPI(range, code)
 }
 
+// Plugin function for selected text
 export const YACAPluginSelected = async () => {
-  const editor = vscode.window.activeTextEditor //获取当前激活的编辑区
-
   if (!editor) {
     vscode.window.showErrorMessage('No editor is active')
     return
   }
-
-  const code = editor.document.getText(editor.selection)
-  const range = editor.selection
-  if (!code) {
+  const selectedRange = editor.selection
+  startLoading(selectedRange.start.line, selectedRange.end.line)
+  const code = editor.document.getText(selectedRange)
+  if (!code.length) {
     return
   }
-
-  const response = await fetchFromAPI(code)
-  //处理响应
-  if (!response.data.improved_project_objects[0].code.content) {
-    return
-  }
-  //处理响应
-  if (range) {
-    replaceContent(
-      range,
-      response.data.improved_project_objects[0].code.content
-    )
-  }
-}
-
-const replaceContent = async (
-  range: vscode.Range | vscode.Position | vscode.Selection,
-  code: string
-) => {
-  editor!.edit((editBuilder) => {
-    editBuilder.replace(range, code)
-  })
+  await fetchDataFromAPI(selectedRange, code)
 }
