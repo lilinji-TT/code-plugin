@@ -33,30 +33,32 @@ const fetchDataFromAPI = async (
   range: vscode.Range | vscode.Position | vscode.Selection,
   code: string
 ) => {
-  const language = getCodeLanguage()
-  const relativePath = getRelativePath()
-  const requestData: RequestData = {
-    scope: ImprovementScope.SNIPPET,
-    project_objects: [
-      {
-        path: relativePath,
-        is_directory: false,
-        size: code.length,
-        code: {
-          content: code,
-          language,
-        },
+
+const language = getCodeLanguage();
+const relativePath = getRelativePath();
+
+const requestData: RequestData = {
+  scope: ImprovementScope.SNIPPET,
+  project_objects: [
+    {
+      path: relativePath,
+      is_directory: false,
+      size: code.length,
+      code: {
+        content: code,
+        language,
       },
-    ],
-    rules: ['AMBIGUOUS_NAME', 'EARLY_RETURN'],
-  }
+    },
+  ],
+  rules: ['AMBIGUOUS_NAME', 'EARLY_RETURN'],
+};
 
   try {
     vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
         title: 'Processing request',
-        cancellable: true,
+        cancellable: false,
       },
       async (progress) => {
         progress.report({ message: 'Starting to fetch data from the API...' })
@@ -66,6 +68,7 @@ const fetchDataFromAPI = async (
         progress.report({ message: 'Request finished' })
         if (improvedCode) {
           replaceContent(range, improvedCode)
+          vscode.window.showInformationMessage(`${response.data.comment}`)
         }
       }
     )
