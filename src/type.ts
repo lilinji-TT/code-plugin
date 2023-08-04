@@ -22,3 +22,7 @@ export type RequestData = {
   project_objects: ProjectObject[]
   rules: string[]
 }
+
+export type fileProps = {
+  fsPath: string
+}

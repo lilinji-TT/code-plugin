@@ -27,7 +27,6 @@
       ],
       "explorer/context": [
         {
-          "when": "true",
           "command": "extension.YACAFileSelected",
           "group": "navigation"
         }
