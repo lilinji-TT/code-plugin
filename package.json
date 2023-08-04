@@ -1,7 +1,7 @@
 {
-  "name": "code-plugin",
-  "displayName": "code plugin",
-  "description": "",
+  "name": "code-review",
+  "displayName": "code review",
+  "description": "Have AI review your code using AMBIGUOUS_NAME, EARLY_RETURN and make a COMMENT!",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.80.0"
@@ -24,16 +24,27 @@
           "command": "extension.YACA:VsCodePluginSelected",
           "group": "navigation"
         }
+      ],
+      "explorer/context": [
+        {
+          "when": "true",
+          "command": "extension.YACAFileSelected",
+          "group": "navigation"
+        }
       ]
     },
     "commands": [
       {
         "command": "extension.YACA:VsCodePlugin",
-        "title": "YACA Code Improvement"
+        "title": "Code Improvement"
       },
       {
         "command": "extension.YACA:VsCodePluginSelected",
-        "title": "YACA Code Improvement Selected"
+        "title": "Code Improvement Selected"
+      },
+      {
+        "command": "extension.YACAFileSelected",
+        "title": "File Selected"
       }
     ]
   },
