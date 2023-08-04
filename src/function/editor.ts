@@ -1,7 +1,6 @@
 import * as vscode from 'vscode'
 import { editor, fetchDataFromAPI } from '../utils'
 
-
 // Main plugin function
 export const YACAPlugin = async () => {
   if (!editor) {
